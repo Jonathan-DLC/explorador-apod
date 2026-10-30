@@ -1,0 +1,585 @@
+/* =========================================================
+   EXPLORADOR APOD
+   Idea de diseño: una noche violeta de los años 80 donde la foto
+   del día se ve en un televisor de tubo (CRT), como una cinta VHS.
+   La fecha de cada foto aparece en la esquina como el sello de
+   fecha de una videocámara, y para cambiar de día se usan botones
+   de VHS: rebobinar (◀◀) y adelantar (▶▶).
+   ========================================================= */
+
+/* 1. RESETEO GLOBAL Y BOX MODEL */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box; /* padding y border no suman al ancho total */
+}
+
+/* 2. VARIABLES DE COLOR: se cambian en un solo lugar */
+:root {
+  --noche: #1B1035;        /* fondo: violeta de atardecer ochentero */
+  --panel: #251646;        /* zonas un poco más claras (libreta, campos) */
+  --plastico: #120A26;     /* plástico oscuro del televisor y botones */
+  --texto: #F3ECFF;        /* blanco lavanda */
+  --texto-suave: #B7A6DB;  /* texto secundario */
+  --osd: #7CF7E4;          /* letras de pantalla de VHS (fechas, estados) */
+  --magenta: #FF4FB8;      /* acción principal */
+  --naranja: #FF9F43;      /* favoritos */
+  --amarillo: #FFE066;     /* tercera franja y foco */
+  --error: #FF7A7A;        /* errores */
+  --linea: rgba(243, 236, 255, .15); /* líneas finas */
+}
+
+/* 3. BASE: dos familias tipográficas con papeles distintos
+   - Archivo: todo lo que se lee (títulos, textos y botones)
+   - VT323: SOLO lo que "sale en pantalla" del VHS (fechas, estados,
+     botones de rebobinar/adelantar) */
+body {
+  font-family: 'Archivo', Arial, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--texto);
+  background-color: var(--noche);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column; /* header, main y footer apilados */
+}
+
+/* Los botones e inputs NO heredan la fuente del body por defecto */
+button,
+input {
+  font: inherit;
+}
+
+.contenedor {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto; /* centra el bloque */
+  padding: 0 24px;
+}
+
+/* 4. ENCABEZADO */
+.encabezado {
+  position: relative; /* ancla para la franja de colores (::after) */
+  padding: 40px 0 36px;
+}
+
+/* La franja de tres colores de las etiquetas de casete de los 80.
+   Un degradado con cortes duros: cada color ocupa 3px exactos. */
+.encabezado::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 9px;
+  background: linear-gradient(to bottom,
+      var(--magenta) 0 3px,
+      var(--naranja) 3px 6px,
+      var(--amarillo) 6px 9px);
+}
+
+/* Letra ANCHA (font-stretch 125%) con una sombra dura sin desenfoque,
+   como los títulos impresos de los 80. Más abajo, los títulos de cada
+   foto van ANGOSTOS (75%): ese contraste es la personalidad de la página. */
+.encabezado h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  font-stretch: 125%;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+  text-shadow: 3px 3px 0 var(--magenta);
+}
+
+.subtitulo {
+  max-width: 60ch; /* líneas cortas = lectura cómoda */
+  margin-top: 12px;
+  color: var(--texto-suave);
+}
+
+/* 5. LAYOUT: dos columnas con Flexbox */
+/* Este elemento también tiene .contenedor (padding: 0 24px).
+   Aquí solo tocamos arriba y abajo para no pisar los lados. */
+.layout-principal {
+  flex: 1; /* empuja el footer al fondo de la pantalla */
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  padding-top: 32px;
+  padding-bottom: 56px;
+}
+
+.columna-apod {
+  flex: 1;      /* ocupa todo el espacio que sobra */
+  min-width: 0; /* permite que la imagen se encoja dentro del flex */
+}
+
+.columna-favoritos {
+  width: 300px;
+  flex-shrink: 0; /* la columna de favoritos no se encoge */
+}
+
+/* 6. BUSCADOR */
+.panel-busqueda {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between; /* fecha a la izquierda, navegación a la derecha */
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.grupo-fecha {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grupo-fecha label {
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.controles-fecha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* El campo de fecha parece el reloj de un VHS */
+input[type="date"] {
+  font-family: 'VT323', monospace;
+  font-size: 1.375rem;
+  line-height: 1;
+  padding: 7px 12px;
+  color: var(--osd);
+  background-color: var(--plastico);
+  border: 2px solid var(--texto-suave);
+  border-radius: 4px;
+  color-scheme: dark; /* el calendario del navegador también sale oscuro */
+}
+
+.controles-navegacion {
+  display: flex;
+  gap: 8px;
+}
+
+/* 7. BOTONES */
+.btn {
+  font-size: .9375rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+/* Buscar: la acción principal, rellena en magenta */
+.btn-primario {
+  color: var(--noche);
+  background-color: var(--magenta);
+}
+
+.btn-primario:hover {
+  background-color: var(--amarillo);
+}
+
+/* Hoy: parece un enlace */
+.btn-secundario {
+  color: var(--texto-suave);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.btn-secundario:hover {
+  color: var(--texto);
+}
+
+/* Rebobinar / adelantar: teclas físicas de un VHS.
+   El borde inferior grueso es el "alto" de la tecla... */
+.btn-nav {
+  font-family: 'VT323', monospace;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+  padding: 8px 14px;
+  color: var(--texto);
+  background-color: var(--panel);
+  border: 1px solid var(--linea);
+  border-bottom: 4px solid var(--plastico);
+}
+
+.btn-nav:hover {
+  color: var(--osd);
+}
+
+/* ...y al hacer clic se hunde: baja 3px y el borde se adelgaza 3px */
+.btn-nav:active {
+  transform: translateY(3px);
+  border-bottom-width: 1px;
+}
+
+/* Va DESPUÉS de los :hover para ganarles (misma especificidad) */
+.btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  color: var(--texto-suave);
+  transform: none;
+}
+
+/* Guardar en favoritos: el único botón naranja */
+.btn-favorito {
+  color: var(--naranja);
+  border-color: var(--naranja);
+  white-space: nowrap; /* el texto no se parte en dos líneas */
+}
+
+.btn-favorito:hover,
+.btn-favorito.guardado {
+  color: var(--noche);
+  background-color: var(--naranja);
+}
+
+/* 8. MENSAJES DE ESTADO (cargando / error): texto de pantalla de VHS */
+.mensaje-estado {
+  font-family: 'VT323', monospace;
+  font-size: 1.375rem;
+  line-height: 1.3;
+  padding: 10px 16px;
+  margin-bottom: 24px;
+  color: var(--osd);
+  background-color: var(--plastico);
+  border-left: 4px solid var(--osd);
+}
+
+.mensaje-estado.error {
+  color: var(--error);
+  border-left-color: var(--error);
+}
+
+/* 9. LA FOTO DEL DÍA: un televisor de tubo */
+.tarjeta-apod {
+  position: relative; /* ancla para la fecha que flota sobre la foto */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* El televisor. order: -1 lo sube por encima del título sin cambiar
+   el HTML: primero se ve la pantalla y luego su pie de foto. */
+.marco-multimedia {
+  order: -1;
+  position: relative;  /* ancla para "PLAY" y las líneas de pantalla */
+  min-height: 260px;
+  background-color: #000;
+  border: 12px solid var(--plastico); /* el marco de plástico */
+  border-radius: 18px;
+  overflow: hidden;    /* la imagen respeta las esquinas redondeadas */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* "PLAY ▶" en la esquina superior derecha, como en un VHS */
+.marco-multimedia::before {
+  content: "PLAY ▶";
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 2;
+  font-family: 'VT323', monospace;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--osd);
+  text-shadow: 0 0 6px rgba(124, 247, 228, .7); /* brillo del fósforo */
+}
+
+/* Líneas horizontales del tubo: un degradado que se repite cada 3px
+   (la misma técnica del código de barras de la credencial).
+   pointer-events: none deja hacer clic "a través" de las líneas. */
+.marco-multimedia::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom,
+      rgba(0, 0, 0, .22) 0 1px,
+      transparent 1px 3px);
+}
+
+.apod-imagen {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 72vh;    /* nunca más alta que la pantalla */
+  object-fit: contain; /* se ve completa, sin recortar ni deformar */
+  animation: encender 0.6s ease-out;
+}
+
+/* Único movimiento automático de la página: cada vez que aparece una
+   foto, la pantalla "se enciende" como un televisor viejo: empieza
+   como una raya horizontal y se abre hacia arriba y hacia abajo. */
+@keyframes encender {
+  from {
+    transform: scaleY(0.02);
+    filter: brightness(3);
+  }
+
+  to {
+    transform: scaleY(1);
+    filter: none;
+  }
+}
+
+/* Cuando la APOD es un video */
+.btn-video {
+  position: relative;
+  z-index: 2; /* por encima de las líneas de pantalla */
+  display: inline-block;
+  font-weight: 700;
+  padding: 12px 20px;
+  color: var(--noche);
+  background-color: var(--osd);
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.btn-video:hover {
+  background-color: var(--amarillo);
+}
+
+/* 10. PIE DE FOTO: título a la izquierda, favorito a la derecha */
+.cabecera-apod {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+/* La fecha sale del pie de foto y flota SOBRE la pantalla, como el
+   sello de fecha de una videocámara. Su ancestro posicionado más
+   cercano es .tarjeta-apod, y lo primero que hay ahí es el televisor. */
+.apod-fecha {
+  position: absolute;
+  top: 24px;  /* 12px del marco + 12px de aire */
+  left: 28px;
+  z-index: 3;
+  font-family: 'VT323', monospace;
+  font-size: 1.75rem;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--osd);
+  text-shadow: 0 0 6px rgba(124, 247, 228, .7);
+}
+
+.apod-titulo {
+  font-size: 2.25rem;
+  font-weight: 700;
+  font-stretch: 75%; /* angosto: contrasta con el h1 ancho */
+  line-height: 1.1;
+}
+
+/* 11. EXPLICACIÓN CIENTÍFICA */
+.cuerpo-apod {
+  max-width: 65ch; /* menos de 80 caracteres por línea */
+  padding-top: 20px;
+  border-top: 1px solid var(--linea);
+}
+
+.cuerpo-apod h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  margin-bottom: 8px;
+}
+
+.apod-explicacion {
+  line-height: 1.75;
+}
+
+.apod-explicacion a {
+  color: var(--osd);
+  text-underline-offset: 3px;
+}
+
+/* 12. FAVORITOS: la repisa de cintas grabadas */
+.tarjeta-favoritos {
+  position: sticky; /* se queda visible al hacer scroll... */
+  top: 24px;        /* ...a 24px del borde superior */
+  padding: 24px 20px;
+  background-color: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+}
+
+.tarjeta-favoritos h2 {
+  font-size: 1.3125rem;
+  font-weight: 700;
+}
+
+.ayuda-favoritos {
+  font-size: .9375rem;
+  line-height: 1.5;
+  color: var(--texto-suave);
+  margin: 4px 0 16px;
+}
+
+/* Aviso en naranja, el color de los favoritos */
+.aviso-favoritos {
+  font-size: .875rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  color: var(--noche);
+  background-color: var(--naranja);
+  border-radius: 4px;
+}
+
+.lista-favoritos {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Cada favorito es el lomo de una cinta: plástico oscuro con una
+   franja de color a la izquierda */
+.item-favorito {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 6px;
+  background-color: var(--plastico);
+  border-left: 6px solid var(--naranja);
+  border-radius: 3px;
+}
+
+.btn-cargar-favorito {
+  flex: 1; /* ocupa toda la fila menos el botón Quitar */
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-cargar-favorito:hover .fav-titulo {
+  text-decoration: underline;
+}
+
+.fav-fecha {
+  font-family: 'VT323', monospace;
+  font-size: 1.125rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: var(--osd);
+}
+
+.fav-titulo {
+  font-size: .9375rem;
+  line-height: 1.35;
+}
+
+.btn-eliminar-fav {
+  font-size: .8125rem;
+  padding: 4px 6px;
+  color: var(--texto-suave);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.btn-eliminar-fav:hover {
+  color: var(--error);
+}
+
+.favoritos-vacio {
+  font-style: italic;
+  color: var(--texto-suave);
+  padding: 12px 0;
+}
+
+/* 13. PIE DE PÁGINA */
+.pie-pagina {
+  padding: 20px 0;
+  border-top: 1px solid var(--linea);
+  font-size: .8125rem;
+  color: var(--texto-suave);
+}
+
+.pie-pagina p {
+  max-width: 1180px; /* mismo ancho y margen que .contenedor */
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* 14. FOCO VISIBLE: quien navega con Tab ve dónde está */
+:focus-visible {
+  outline: 3px solid var(--amarillo);
+  outline-offset: 2px;
+}
+
+/* 15. RESPONSIVE */
+/* Tablet y celular: los favoritos pasan debajo de la foto */
+@media (max-width: 860px) {
+  .layout-principal {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .columna-favoritos {
+    width: auto;
+  }
+
+  .tarjeta-favoritos {
+    position: static; /* sin sticky cuando todo va en una columna */
+  }
+
+  .encabezado h1,
+  .apod-titulo {
+    font-size: 1.75rem;
+  }
+}
+
+/* Celular: buscador y navegación apilados, textos de pantalla más chicos */
+@media (max-width: 520px) {
+  .panel-busqueda {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .controles-navegacion {
+    justify-content: space-between;
+  }
+
+  .apod-fecha,
+  .marco-multimedia::before {
+    font-size: 1.25rem;
+  }
+}
+
+/* Si la persona pidió menos movimiento en su sistema, no animamos */
+@media (prefers-reduced-motion: reduce) {
+  .apod-imagen {
+    animation: none;
+  }
+}
+
+/* 16. UTILIDAD PARA OCULTAR (la usa JavaScript)
+   Va AL FINAL a propósito: tiene la misma especificidad que
+   .btn-video o .tarjeta-apod, y en un empate gana la última regla. */
+.oculto {
+  display: none;
+}

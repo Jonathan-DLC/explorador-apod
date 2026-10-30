@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explorador APOD</title>
+
+  <!-- Fuentes: Archivo (textos, títulos y botones) y VT323 (letras de pantalla de VHS) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=VT323&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="encabezado">
+    <div class="contenedor">
+      <h1>Explorador APOD</h1>
+      <p class="subtitulo">Cada día, desde el 16 de junio de 1995, la NASA publica una imagen o video del universo con su explicación. Elige una fecha y descúbrela.</p>
+    </div>
+  </header>
+
+  <main class="contenedor layout-principal">
+    <!-- Columna principal: Buscador + APOD -->
+    <section class="columna-apod">
+      <!-- Barra de búsqueda por fecha (Funcionalidad 2 + Reto extra navegación) -->
+      <div class="panel-busqueda">
+        <div class="grupo-fecha">
+          <label for="input-fecha">Elige una fecha</label>
+          <div class="controles-fecha">
+            <input type="date" id="input-fecha" min="1995-06-16">
+            <button type="button" id="btn-buscar" class="btn btn-primario">Buscar</button>
+            <button type="button" id="btn-hoy" class="btn btn-secundario">Hoy</button>
+          </div>
+        </div>
+
+        <div class="controles-navegacion">
+          <button type="button" id="btn-anterior" class="btn btn-nav">◀◀ Día anterior</button>
+          <button type="button" id="btn-siguiente" class="btn btn-nav">Día siguiente ▶▶</button>
+        </div>
+      </div>
+
+      <!-- Mensajes de estado: Cargando, errores o avisos -->
+      <p id="mensaje-estado" class="mensaje-estado oculto" role="status" aria-live="polite"></p>
+
+      <!-- Tarjeta de la APOD (Funcionalidad 1) -->
+      <article id="contenedor-apod" class="tarjeta-apod oculto">
+        <div class="cabecera-apod">
+          <div>
+            <p id="apod-fecha" class="apod-fecha"></p>
+            <h2 id="apod-titulo" class="apod-titulo"></h2>
+          </div>
+          <button type="button" id="btn-favorito" class="btn btn-favorito">Guardar en favoritos</button>
+        </div>
+
+        <div class="marco-multimedia">
+          <img id="apod-imagen" class="apod-imagen" src="" alt="">
+          <a id="apod-enlace-video" class="btn-video oculto" href="#" target="_blank" rel="noopener noreferrer">Ver el video en el sitio de la NASA</a>
+        </div>
+
+        <div class="cuerpo-apod">
+          <h3>Explicación científica</h3>
+          <div id="apod-explicacion" class="apod-explicacion"></div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Columna lateral: Favoritos (Funcionalidad 3) -->
+    <aside class="columna-favoritos">
+      <div class="tarjeta-favoritos">
+        <h2>Mis favoritos</h2>
+        <p class="ayuda-favoritos">Toca una fecha guardada para volver a ver su imagen.</p>
+        <p id="mensaje-favoritos" class="aviso-favoritos oculto"></p>
+        <ul id="lista-favoritos" class="lista-favoritos"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="pie-pagina">
+    <p>Imágenes y textos de la API pública APOD de la NASA. Proyecto hecho con npm y Day.js.</p>
+  </footer>
+
+  <!-- 2.5 Conectar Day.js en el HTML (el orden importa) -->
+  <script src="node_modules/dayjs/dayjs.min.js"></script>
+  <script src="node_modules/dayjs/locale/es.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
